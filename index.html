@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scratch & Win Reward!</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      background: #0f172a;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px 10px;
+      margin: 0;
+    }
+    h2 { margin-top: 20px; color: #facc15; }
+    p { color: #cbd5e1; font-size: 14px; }
+    
+    .card-container {
+      position: relative;
+      width: 280px;
+      height: 280px;
+      margin: 25px auto;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+      background: #1e293b;
+      border: 2px solid #334155;
+    }
+    
+    .prize-bg {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+    }
+    
+    .prize-bg h3 { 
+      margin: 10px 0; 
+      font-size: 22px; 
+      line-height: 1.4;
+    }
+    .win-text { color: #4ade80; }
+    .loss-text { color: #f87171; }
+    
+    canvas {
+      position: absolute;
+      top: 0; left: 0;
+      cursor: pointer;
+      touch-action: none;
+    }
+    
+    .btn {
+      display: inline-block;
+      margin-top: 15px;
+      padding: 10px 20px;
+      background: #22c55e;
+      color: #fff;
+      text-decoration: none;
+      font-weight: bold;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(34, 197, 94, 0.3);
+    }
+  </style>
+</head>
+<body>
+
+  <h2>🎁 Scratch Your Card!</h2>
+  <p id="subHeading">Apna reward dekhne ke liye finger se card ko scratch karein</p>
+
+  <div class="card-container">
+    <div class="prize-bg">
+      <h3 id="resultText">Loading...</h3>
+      <a id="claimBtn" href="#" class="btn" style="display:none;">Claim Reward</a>
+    </div>
+    <canvas id="scratchCanvas" width="280" height="280"></canvas>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('scratchCanvas');
+    const ctx = canvas.getContext('2d');
+    const resultText = document.getElementById('resultText');
+    const claimBtn = document.getElementById('claimBtn');
+    const subHeading = document.getElementById('subHeading');
+
+    // PRIZE LOGIC WITH UPDATED WEIGHTAGE (Total = 100)
+    function getRandomPrize() {
+      const rand = Math.random() * 100;
+
+      if (rand < 50) { 
+        // 50% Chance -> Better Luck Next Time
+        return { type: 'loss', title: 'Better Luck Next Time', text: '<span class="loss-text">😔 Better Luck Next Time!</span><br>Agli baar try karein.' };
+      } else if (rand < 75) { 
+        // 25% Chance -> 10RS Cashback
+        return { type: 'win', title: '10RS Cashback', text: '<span class="win-text">🎉 Mubarak Ho!</span><br>Aapne ₹10 Cashback Jeeta!' };
+      } else if (rand < 85) { 
+        // 10% Chance -> 50% Off Match
+        return { type: 'win', title: '50% Off Match', text: '<span class="win-text">🎉 Great Deal!</span><br>50% OFF on Next Match!' };
+      } else if (rand < 95) { 
+        // 10% Chance -> 30RS Redeem Code
+        return { type: 'win', title: '30RS Redeem Code', text: '<span class="win-text">🔥 Super Reward!</span><br>₹30 Redeem Code Jeeta!' };
+      } else { 
+        // 5% Chance -> 50RS Cashback
+        return { type: 'win', title: '50RS Cashback', text: '<span class="win-text">💥 MEGA WIN!</span><br>Aapne ₹50 Cashback Jeeta!' };
+      }
+    }
+
+    // ANTI-CHEAT GUARD (CHECK IF ALREADY SCRATCHED)
+    let savedPrize = localStorage.getItem('userScratchReward');
+    let prize;
+
+    if (savedPrize) {
+      prize = JSON.parse(savedPrize);
+      canvas.style.display = 'none'; 
+      subHeading.innerText = "Aapne apna scratch card pehle hi claim kar liya hai!";
+    } else {
+      prize = getRandomPrize();
+      
+      ctx.fillStyle = '#64748b';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 20px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('SCRATCH HERE', 140, 145);
+    }
+
+    resultText.innerHTML = prize.text;
+
+    if (prize.type === 'win') {
+      claimBtn.style.display = "inline-block";
+      claimBtn.href = "https://wa.me/?text=" + encodeURIComponent("Mujhe Scratch Card se " + prize.title + " mila hai!");
+    }
+
+    let isDrawing = false;
+
+    function scratch(e) {
+      if (!isDrawing) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+      const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath();
+      ctx.arc(x, y, 25, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (!savedPrize) {
+        localStorage.setItem('userScratchReward', JSON.stringify(prize));
+      }
+    }
+
+    canvas.addEventListener('mousedown', () => isDrawing = true);
+    canvas.addEventListener('mouseup', () => isDrawing = false);
+    canvas.addEventListener('mousemove', scratch);
+
+    canvas.addEventListener('touchstart', () => isDrawing = true);
+    canvas.addEventListener('touchend', () => isDrawing = false);
+    canvas.addEventListener('touchmove', scratch);
+  </script>
+
+</body>
+</html>
